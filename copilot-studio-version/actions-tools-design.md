@@ -97,3 +97,51 @@ Assume Splunk may contain credentials, personal data, incident details, and regu
 
 ### Auditing and operational control
 Log every tool invocation, the requesting identity, the target environment, the endpoint called, the parameters sent, and the response class. For write actions, store before-and-after values where feasible and link to a ticket, approval record, or incident number.
+
+---
+
+## Phase 2: Example User Requests and Backend Dependencies
+
+These supplements apply to the Phase 2 read-only tool table above. They specify what user question triggers each tool and what must exist in the backend before the action can work.
+
+| Action | Example User Request | Required Backend Dependency |
+|---|---|---|
+| Get platform and version info | "What version of Splunk is this environment running?" | Splunk REST API accessible on port 8089; service account with `list_settings` capability |
+| List indexes and retention settings | "Show me all indexes and their current retention settings." | Service account with `indexes_edit` or at minimum `list_storage_passwords` replaced by read-only index permissions; `GET /services/data/indexes` accessible |
+| List data inputs | "What data inputs are currently configured on the indexers?" | Service account with `admin` or `input_read` capabilities; access to `_internal`, `_audit` restricted unless explicitly authorized |
+| List saved searches | "List all scheduled searches and their last run status." | Service account with `search` and `schedule_search` capabilities (read-only); namespace `-/-` or a specified app context |
+| Execute constrained diagnostic search | "Run a search showing how many 404 errors occurred in the web logs in the last hour." | Search job creation permissions; result size cap enforced (e.g., 1,000 results max); allowlist of queryable index names; Power Automate flow with polling loop for async job pattern |
+| Read cluster status | "Is the indexer cluster healthy?" | Service account with `list_indexer_clusters` or equivalent; version detection via `/services/server/info` performed first |
+| List installed apps | "What version of the CIM TA is installed?" | Service account with `rest_apps_management` or `list_apps` capability |
+| Read license or health messages | "Are there any current licensing warnings?" | Service account with `license_read` or `list_settings` capability |
+
+---
+
+## What Should NOT Be Implemented as a Tool Yet
+
+The following are candidates users may request but should remain out of scope for Phase 2 and Phase 3 until additional safeguards and approvals are in place:
+
+| Capability | Reason to Exclude |
+|---|---|
+| **Delete an index** | Permanent, irreversible data loss. No enterprise approval workflow can safely be executed via an agent action in Phase 2 or 3. Route through a manual infrastructure workflow. |
+| **Remove or reset user passwords** | Authentication administration creates significant security risk if the agent or its service account are compromised. Handle through the Splunk admin UI or identity provider integration. |
+| **Delete or disable a HEC token** | Tokens may serve active data pipelines. Disabling one without understanding its consumers can drop data silently. Exclude until a proper impact-analysis step can be automated. |
+| **Edit `system/default` app or any built-in Splunk configuration** | Modifications to `system/default` can break platform behavior for all apps and all users. This is irreversible without a full reinstall. |
+| **Execute bulk search over sensitive indexes** | Any tool that allows a free-form search over indexes containing PII, credentials, or regulated data requires a data-access governance gate that is not available in early agent phases. |
+| **Modify cluster replication factor or search factor** | Architecture-level change. Misconfiguration causes cluster instability or data availability loss. Route to a change management workflow, not an agent action. |
+| **Manage authentication tokens for other users** | Token creation or revocation for arbitrary users requires elevated access that should not be delegated to a general-purpose agent action. |
+
+---
+
+## Enterprise Authentication Tradeoffs
+
+Choose the authentication model based on the risk level of the action and the accountability requirements of your organization.
+
+| Auth Model | How It Works | Appropriate For | Risks and Limitations |
+|---|---|---|---|
+| **User-delegated (individual user's Splunk auth token)** | Each user's Splunk token is passed to the connector at runtime via an OAuth connection or personal connection. | Phase 2 read-only actions where the result set should be scoped to the user's own Splunk permissions. Triage and notable update actions in Phase 3 where case accountability matters. | Token lifetime management; requires every user to have a Splunk account and generate a token; not scalable for large or transient user populations. |
+| **Service account with scoped read permissions** | A single Splunk service account is configured in the Power Automate connector or custom connector definition. All agent invocations use this identity. | Phase 2 read-only diagnostic and inventory actions where the result set does not carry sensitive event content. | Service account has no individual accountability — log which user triggered the action at the Power Automate flow level. Rotate credentials on a documented schedule. Scope to minimum required capabilities and indexes only. |
+| **Service principal via API gateway** | A service principal authenticates to an API gateway (e.g., Azure API Management), which holds the Splunk credential and forwards requests. | Phase 2 and Phase 3 in organizations that have an API management layer. Enables centralized rate limiting, audit logging, credential rotation, and IP allowlisting without per-service credential management. | Higher infrastructure cost. Requires an API gateway platform and a credential-management process. Token rotation must be synchronized between the gateway and Splunk. |
+| **Approval-based execution (human-in-the-loop)** | The agent prepares a change request, but a human approves it before execution. Power Automate sends an approval request to a Teams channel or email; execution occurs only after a named approver responds. | Phase 3 high-risk write actions: enabling or disabling correlation searches, creating HEC tokens, creating indexes, updating lookup files. | Adds latency. Approval notifications can be missed or bypassed by approvers under time pressure. Audit trail depends on the approver logging their decision reason. |
+
+**Recommendation for regulated environments:** Combine a read-only service account for Phase 2 actions with approval-based execution for all Phase 3 write actions. Treat the service account's Splunk auth token as a secret stored in Azure Key Vault, referenced by the Power Automate connector, and rotated every 90 days. Do not store Splunk credentials in environment variables, connector definitions, or agent configuration fields.

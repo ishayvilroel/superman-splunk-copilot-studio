@@ -9,6 +9,25 @@
 
 ---
 
+## Current Status
+
+This is a **v1.2 implementation-ready design package**. It is not a deployed agent, a tested system, or a plug-and-play product. It is a detailed migration blueprint: structured instructions, a knowledge architecture, a phased tool design, a migration plan, and a gap analysis intended for implementation by a qualified team.
+
+To deploy a working Copilot Studio agent from this package, you need: a Microsoft 365 / Copilot Studio environment, a Dataverse environment, a SharePoint site, a Splunk SME to review and adapt the instructions to your environment, and a testing phase against real prompts. See [`migration-plan.md`](copilot-studio-version/migration-plan.md) for prerequisites and phase exit criteria.
+
+---
+
+## Who This Is For
+
+- **Splunk architects and administrators** who want to expose Splunk expertise through a Microsoft 365 enterprise agent
+- **Security engineers and SOC teams** working in M365 environments who use Splunk ES, SOAR, or ITSI
+- **Microsoft 365 / Copilot Studio implementers** who have been asked to build a Splunk advisory agent and want a well-structured starting point
+- **Enterprise architects** evaluating whether a Superpowers-style AI skill can be translated into a governed Copilot Studio deployment
+
+This package assumes familiarity with both Splunk administration and Microsoft Copilot Studio. It is not an introductory guide to either platform.
+
+---
+
 ## What Is This?
 
 This repository contains the **Microsoft Copilot Studio migration** of the [`superman-splunk`](https://github.com/ishayvilroel/superman-splunk) skill — a Splunk expert AI designed for enterprise Microsoft 365 environments.
@@ -34,16 +53,22 @@ copilot-studio-version/
 
 ## Quick Start
 
-### 1. Create the agent in Copilot Studio
+> **Note:** "Quick Start" here means: start the implementation process. Building a working enterprise agent requires prerequisites (licensing, SharePoint, Splunk SME review) and a multi-phase rollout. The steps below outline the path, not a 30-minute setup. Read [`migration-plan.md`](copilot-studio-version/migration-plan.md) for full phase detail.
+
+### 1. Confirm prerequisites
+
+Confirm Microsoft 365 Copilot or Copilot Studio standalone licensing, a provisioned Dataverse environment, and a SharePoint site designated for agent knowledge. Identify the Splunk SME who will review and adapt the instructions for your environment.
+
+### 2. Create the agent in Copilot Studio
 
 1. Go to [copilotstudio.microsoft.com](https://copilotstudio.microsoft.com)
 2. Create a new agent → name it **"Splunk Expert"**
 3. Open the **Instructions** field
 4. Paste the contents of [`copilot-studio-version/copilot-studio-paste-ready.txt`](copilot-studio-version/copilot-studio-paste-ready.txt)
 
-### 2. Add knowledge sources
+### 3. Add knowledge sources
 
-Upload the 5 reference files from the [superman-splunk](https://github.com/ishayvilroel/superman-splunk) skill as SharePoint documents, then add them to the agent's knowledge:
+Convert the 5 reference files from [superman-splunk](https://github.com/ishayvilroel/superman-splunk) to `.docx` format (Markdown is not a supported Copilot Studio knowledge type — use `pandoc input.md -o output.docx`), upload to SharePoint, then add to the agent's knowledge:
 
 | SharePoint Document Title | Source File |
 |--------------------------|-------------|
@@ -53,15 +78,15 @@ Upload the 5 reference files from the [superman-splunk](https://github.com/ishay
 | Splunk Administration & Configuration | `references/administration.md` |
 | Splunk Security, ES & SOAR | `references/security-es.md` |
 
-See [`knowledge-mapping.md`](copilot-studio-version/knowledge-mapping.md) for full chunking strategy and SharePoint folder structure.
+See [`knowledge-mapping.md`](copilot-studio-version/knowledge-mapping.md) for chunking strategy, retrieval failure modes, and SharePoint governance structure.
 
-### 3. Add suggested prompts
+### 4. Add starter and validation prompts
 
-Add the 12 starter prompts from [`suggested-prompts.md`](copilot-studio-version/suggested-prompts.md) as conversation starters in the Copilot Studio agent configuration.
+Add the prompts from [`suggested-prompts.md`](copilot-studio-version/suggested-prompts.md). The file includes 12 enterprise operational prompts and 3 validation prompts for acceptance testing.
 
-### 4. Follow the migration plan
+### 5. Follow the migration plan
 
-See [`migration-plan.md`](copilot-studio-version/migration-plan.md) for the full phased rollout — from prerequisites through pilot deployment.
+See [`migration-plan.md`](copilot-studio-version/migration-plan.md) for the full phased rollout — from prerequisites and exit criteria through pilot deployment and production governance.
 
 ---
 

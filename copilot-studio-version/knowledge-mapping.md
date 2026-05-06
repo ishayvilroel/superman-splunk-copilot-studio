@@ -87,3 +87,60 @@ SharePoint Site: /sites/copilot-splunk-knowledge
 7. Restrict access at the SharePoint library or site level for security-sensitive ES and hardening content so Copilot Studio respects Microsoft 365 access controls.
 8. Re-test retrieval after every major knowledge refresh by running a fixed prompt set for SPL, admin, Cloud, and ES scenarios; tune titles, descriptions, and chunk size when the wrong document is cited.
 9. Note the SharePoint document size limit of 50 MB. For large reference files, split into sub-documents before upload rather than relying on automatic chunking.
+
+---
+
+## Update Owners and Retrieval Risk Summary
+
+| Source File | SharePoint Title | Update Owner | Review Frequency | Access Scope | Key Retrieval Risk |
+|---|---|---|---|---|---|
+| `architecture.md` | Splunk Architecture and Core Platform Guide | Splunk Platform Owner | Quarterly + post-upgrade | Splunk admins, SRE, SecOps, Copilot makers | Conflation of SHC guidance with SmartStore or deployment server topics when chunked too coarsely |
+| `spl-guide.md` | Splunk SPL and Knowledge Objects Guide | Splunk SME / Detection Lead | Monthly + post macro change | SOC analysts, detection engineers, ops analysts | SPL syntax retrieved without usage context; outdated transforming command guidance if doc lags platform |
+| `development.md` | Splunk App Development and Integration Guide | App Framework Lead / Lead Developer | Monthly + post SDK change | Developers, integration teams, platform engineering | Confusion between search-time and index-time guidance when app admin and dev content is mixed |
+| `administration.md` | Splunk Administration and Configuration Guide | Splunk Service Owner | Quarterly + post standards change | Splunk admins, SRE, SOC engineering | Wrong conf file chunk returned when conf domains overlap in a single document |
+| `security-es.md` | Splunk Security, ES, and Governance Guide | Security Engineering Lead | Monthly + post ES change | Security engineering, SOC leads, authorized admins | Platform-specific guidance mixed between Enterprise and Cloud when not segregated by chunk |
+
+---
+
+## Poor Retrieval Failure Modes
+
+These are the most common ways Copilot Studio retrieval degrades. Prevent them before they occur.
+
+### Overlapping Documents
+**What happens:** Two documents cover the same Splunk topic with slightly different scope — e.g., `administration.md` and `architecture.md` both describe indexer clustering. The retriever returns both chunks, and the agent synthesizes them inconsistently.
+**How to prevent:** Establish clear document ownership boundaries. Each major topic belongs in exactly one document. Use cross-references instead of duplicating content.
+
+### Stale Content
+**What happens:** A document was updated 18 months ago. The Splunk environment upgraded from 8.x to 9.x. The agent retrieves guidance for `/services/cluster/master/info` (deprecated in 9.x) instead of `/services/cluster/manager/info`.
+**How to prevent:** Enforce the review schedule in the table above. Flag version-sensitive guidance explicitly in the document. After a major Splunk upgrade, treat all five knowledge documents as requiring review before re-publishing.
+
+### Conflicting Guidance
+**What happens:** The administration guide and the security guide both describe TLS configuration but give different recommended settings. The agent cannot resolve the conflict and returns mixed instructions.
+**How to prevent:** Designate one document as the authoritative source for each topic. The security guide covers TLS hardening policy; the administration guide covers TLS configuration mechanics. Both should cross-reference each other rather than independently describe the same steps.
+
+### Bad Chunk Boundaries
+**What happens:** A large document about `props.conf` is chunked mid-stanza-example, splitting the explanation from the example. The retrieved chunk contains instructions without the corresponding example, or an example without context.
+**How to prevent:** Pre-split documents at natural boundaries (one `.conf` file per SharePoint document, one major concept per file). Do not rely on Copilot Studio auto-chunking to handle large documents correctly.
+
+### Missing Platform Segregation
+**What happens:** The agent retrieves guidance that applies to Splunk Enterprise but presents it to a user on Splunk Cloud. Scripted input guidance, local custom commands, or `outputs.conf` changes that are not permitted on Cloud are offered without caveats.
+**How to prevent:** Create a dedicated "Splunk Cloud vs Enterprise Differences" sub-document. The agent instructions already require asking about deployment type, but knowledge grounding must reinforce this with explicit platform labeling in document content.
+
+---
+
+## Knowledge Governance
+
+### Document Ownership
+Every knowledge document must have a named owner responsible for accuracy, not just a team. The owner is accountable for initiating reviews, approving changes, and confirming version compatibility after Splunk upgrades.
+
+### Change Control
+Changes to knowledge documents should follow the same change control process as other operational documentation. For security-sensitive content (ES correlation rules, hardening guidance, RBAC), require a second-reviewer approval before the updated document is re-published to SharePoint.
+
+### Versioning
+Add a document header to every knowledge file stating: document title, Splunk version coverage, last reviewed date, next scheduled review, and current owner. This metadata allows the agent to surface version caveats when it retrieves guidance and allows human reviewers to identify stale documents quickly.
+
+### Source-of-Truth Discipline
+These SharePoint documents are the source of truth for the Copilot Studio agent. Do not create parallel guidance documents elsewhere — IT wikis, Confluence pages, or team OneNote notebooks — that contradict the SharePoint knowledge library. If a conflict exists in the source environment, the discrepancy produces inconsistent agent answers. Establish a clear rule: the SharePoint knowledge library is authoritative; other documentation must reference it rather than replicate it.
+
+### Retirement and Archival
+When a document is superseded (e.g., a Splunk version end-of-lifes and all tenants have migrated), remove it from the active knowledge library or archive it to a separate SharePoint location where it is not indexed by the agent. Stale documents that remain in the knowledge library become a persistent retrieval risk.
