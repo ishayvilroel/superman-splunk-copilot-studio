@@ -2,9 +2,11 @@
 
 ## Phase 0: Prerequisites & Assessment
 
-**Estimated Effort:** 0.5-1.5 days  
+**Estimated Effort:** 0.5–1.5 days (developer sandbox) / 2–6 weeks (governed enterprise with change control, security review, and IT governance)  
 **Primary Owner:** Copilot Studio admin with Splunk SME and IT governance support  
-**Key Risks:** Missing licensing, unclear ownership, no approved SharePoint location, unclear production versus non-production boundaries
+**Key Risks:** Missing licensing, unclear ownership, no approved SharePoint location, unclear production versus non-production boundaries, network connectivity to Splunk port 8089 not yet approved
+
+> **Enterprise timing note:** Effort estimates in this plan reflect a developer sandbox with Dataverse, SharePoint, and licensing already in place. For a governed enterprise deployment — with change control, security review, DLP policy assessment, and IT governance — Phase 0 through Phase 3 realistically takes 4–8 weeks. Plan network connectivity prerequisites (see `actions-tools-design.md`) before committing to Phase 2.
 
 ### Objectives
 - Confirm the target Copilot Studio environment and licensing model
@@ -13,11 +15,13 @@
 - Decide whether the first release is knowledge-only or will include live tools
 
 ### Checklist
-1. Confirm Copilot Studio access, Dataverse environment, and publishing rights.
-2. Confirm Microsoft 365 access model and the SharePoint site that will host knowledge files.
-3. Confirm the initial operating model: knowledge-only, read-only tools, or staged rollout.
-4. Identify which Splunk environments are in scope: dev, test, production; Enterprise, Cloud, or both.
-5. Agree on ownership for instructions, knowledge updates, testing, and approval of future tools.
+1. Confirm Microsoft 365 Copilot licensing (E3/E5 + Copilot add-on) or Copilot Studio standalone licensing. These are different SKUs with different feature access — verify which applies to your environment before proceeding.
+2. Confirm Copilot Studio access, Dataverse environment, and publishing rights.
+3. Confirm Microsoft 365 access model and the SharePoint site that will host knowledge files.
+4. Confirm the initial operating model: knowledge-only, read-only tools, or staged rollout.
+5. Identify which Splunk environments are in scope: dev, test, production; Enterprise, Cloud, or both.
+6. **Plan network connectivity** if Phase 2 tools are planned: Splunk REST API runs on port 8089. Confirm whether a VPN, ExpressRoute, on-premises data gateway, or API proxy is required to reach it from Power Automate. See `actions-tools-design.md` for details.
+7. Agree on ownership for instructions, knowledge updates, testing, and approval of future tools.
 
 ## Phase 1: Extract & Prepare Instructions
 
@@ -40,7 +44,7 @@
 **Key Risks:** Poor retrieval due to oversized documents, mixing Cloud and Enterprise guidance in one chunk, weak access control on security content
 
 ### Steps
-1. Take each reference markdown file and convert it into SharePoint-friendly documents such as DOCX, PDF, or well-structured modern pages.
+1. Take each reference markdown file and **convert it to `.docx` using Pandoc** (`pandoc input.md -o output.docx`) before uploading to SharePoint. Markdown (`.md`) is not an officially supported Copilot Studio knowledge file type. Raw `.md` uploads may degrade chunking quality because markdown syntax characters pollute the extracted text. Supported knowledge file formats include `.docx`, `.pdf`, `.pptx`, and `.txt`.
 2. Split large files into smaller knowledge assets by task area: architecture, SPL, app development, admin configuration, and security or ES.
 3. Separate high-risk or security-sensitive material into a restricted SharePoint library or site.
 4. Use descriptive titles and detailed descriptions for every knowledge source; Copilot Studio retrieval quality improves when the description clearly states when that source should be used.

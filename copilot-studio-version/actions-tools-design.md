@@ -22,12 +22,12 @@ Add read-only REST actions only after the knowledge-only agent is performing rel
 
 | Action | Purpose | Splunk REST API Endpoint | Risk Level | Authentication Model | Recommended for Enterprise Deployment |
 |---|---|---|---|---|---|
-| Get platform and version info | Confirm Splunk version, build, server role, and edition context before answering operational questions. | `GET /services/server/info` | Low | Service account with read-only REST permissions, or user-delegated auth | Yes |
-| List indexes and retention settings | Show available indexes, storage paths, and retention-related metadata for architecture and admin troubleshooting. | `GET /services/data/indexes` | Low | Service account preferred | Yes |
+| Get platform and version info | Confirm Splunk version, build, server role, and edition context before answering operational questions. | `GET /services/server/info` | Low | Splunk authentication token (generated via `/services/auth/tokens`) or basic auth. **Note:** Splunk's REST API does not natively support OAuth 2.0. OAuth 2.0 requires an API gateway or proxy layer. | Yes |
+| List indexes and retention settings | Show available indexes, storage paths, and retention-related metadata for architecture and admin troubleshooting. | `GET /services/data/indexes` | Low | Service account with read-only REST permissions; Splunk auth token preferred | Yes |
 | List data inputs | Inspect configured monitor, network, scripted, and HEC-related inputs without changing them. | `GET /services/data/inputs/all` | Medium | Service account with tightly scoped read permissions | Yes |
-| List saved searches and correlation-search-style objects | Review schedules, actions, app context, and ownership for admin or ES troubleshooting. | `GET /servicesNS/-/-/saved/searches` | Medium | Service account or user-delegated auth | Yes |
-| Execute constrained diagnostic search | Run a time-bounded SPL query to validate fields, counts, or configuration effects. | `POST /services/search/jobs/export` | Medium | User-delegated preferred for data minimization; service account only with strict guardrails | Yes, with allowlists and result-size limits |
-| Read cluster status | Inspect indexer cluster or search head cluster health before giving change advice. | `GET /services/cluster/manager/info` and `GET /services/shcluster/captain/info` | Low | Service account limited to admin-read endpoints | Yes |
+| List saved searches and correlation-search-style objects | Review schedules, actions, app context, and ownership for admin or ES troubleshooting. | `GET /servicesNS/-/-/saved/searches` | Medium | Service account or user-delegated Splunk auth token | Yes |
+| Execute constrained diagnostic search | Run a time-bounded SPL query to validate fields, counts, or configuration effects. Use the two-step create-then-poll pattern (`POST /services/search/jobs` + `GET /services/search/jobs/{sid}/results`) for searches that run longer than a few seconds. Use `POST /services/search/jobs/export` only for fast, simple searches — it is a streaming endpoint and will stall or time out on longer queries. | `POST /services/search/jobs` + `GET /services/search/jobs/{sid}/results` | Medium | User-delegated Splunk auth token preferred; service account only with strict allowlists and result-size limits | Yes |
+| Read cluster status | Inspect indexer cluster or search head cluster health before giving change advice. **Version note:** `/services/cluster/manager/info` was renamed from `/services/cluster/master/info` in Splunk 9.0. On Splunk 8.x, use the `/master/` path. Always retrieve Splunk version first via `GET /services/server/info`. | `GET /services/cluster/manager/info` (Splunk 9.x+) or `GET /services/cluster/master/info` (Splunk 8.x) | Low | Service account limited to admin-read endpoints | Yes |
 | List installed apps | Show which apps or TAs are present and their versions before recommending app-local changes. | `GET /services/apps/local` | Low | Service account preferred | Yes |
 | Read health or license messages | Surface licensing warnings or health signals that affect troubleshooting and planning. | `GET /services/licenser/messages` or `GET /services/server/health` | Low | Service account preferred | Yes |
 
@@ -46,7 +46,7 @@ Do not expose write actions until the organization has an approval workflow, aud
 | Enable or disable a saved search or correlation search | Pause a noisy search, re-enable a validated one, or change scheduling state in a controlled way. | `POST /servicesNS/-/-/saved/searches/{name}` | High | Dedicated admin service account, scoped to specific apps and objects | Yes, but only with object allowlists | Require change request or dual approval in production; single approval in non-prod | Record who requested it, who approved it, object name, old value, new value, timestamp, and ticket ID |
 | Update a lookup file | Refresh a controlled CSV lookup used for enrichment, suppression, or watchlists. | `POST /servicesNS/{owner}/{app}/data/lookup-table-files` | Medium | Service account scoped to one app namespace | Yes | Require content-owner approval and schema validation before upload | Store checksum, previous file version, requesting user, approving user, and rollback location |
 | Update ES notable status or owner | Support triage workflows such as assigning or closing notable events with policy guardrails. | `POST /servicesNS/nobody/SplunkEnterpriseSecuritySuite/notable_update` | Medium | User-delegated auth strongly preferred for case accountability | Yes, for SOC workflows | No separate approval for routine triage; elevated approval for bulk actions | Log notable IDs, previous status, new status, owner changes, user identity, and reason code |
-| Create a HEC token | Provision a new onboarding token for approved sources or teams. | `POST /servicesNS/nobody/system/data/inputs/http` | High | Dedicated provisioning service account, isolated from search access | Yes, only through a governed onboarding workflow | Require formal request, security review, and target-index approval | Log token name, indexes, source system, TTL or rotation policy, requester, approver, and vault reference |
+| Create a HEC token | Provision a new onboarding token for approved sources or teams. | `POST /servicesNS/{user}/{app}/data/inputs/http` (use the correct owner and app namespace for your environment; the `nobody/system` namespace may return 404 on some versions) | High | Dedicated provisioning service account, isolated from search access | Yes, only through a governed onboarding workflow | Require formal request, security review, and target-index approval | Log token name, indexes, source system, TTL or rotation policy, requester, approver, and vault reference |
 | Create a new index | Provision a new index with approved retention and sizing settings. | `POST /services/data/indexes` | High | Dedicated infrastructure admin service account | Yes, but often better through an infrastructure workflow than direct agent execution | Require CAB or platform-owner approval in production | Capture full parameter set, retention values, storage class, approver, requester, and rollback or decommission plan |
 
 ### Controlled admin design notes
@@ -54,6 +54,21 @@ Do not expose write actions until the organization has an approval workflow, aud
 - Expose write actions only to a separate administrative agent or topic set, not the general analyst-facing assistant.
 - Add pre-execution confirmation text that summarizes the pending change in plain language.
 - Prefer actions that target one known object instead of free-form administrative write access.
+
+## Network Connectivity Prerequisites
+
+**This is the most common blocker for Phase 2 adoption.** The Splunk REST API runs on port 8089. In most enterprise deployments, Splunk is on-premises or in a private cloud segment. Power Automate cloud connectors run in Azure. Without explicit network path planning, the connector cannot reach Splunk.
+
+Resolve this before committing to Phase 2:
+
+| Scenario | Required Component |
+|---|---|
+| On-premises Splunk, Power Automate cloud flows | On-premises data gateway installed on a server with network access to Splunk port 8089 |
+| On-premises Splunk, Azure-hosted flows | VPN, ExpressRoute, or API gateway proxy that exposes port 8089 to Azure |
+| Splunk Cloud (Victoria or Classic) | Splunk Cloud allows REST access on port 8089; verify allowlisted IPs or firewall rules for Azure egress IPs |
+| Dev/test sandbox | Direct connectivity or SSH tunnel is acceptable; do not use in production |
+
+A network and security review for a new connector path typically takes **2–8 weeks** in a governed enterprise. Plan this in Phase 0, not Phase 2.
 
 ## Connector Options
 

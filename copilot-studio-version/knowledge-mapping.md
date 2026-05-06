@@ -78,10 +78,12 @@ SharePoint Site: /sites/copilot-splunk-knowledge
 
 ## Retrieval Optimization Tips
 
-1. Break large monolithic markdown files into smaller SharePoint documents aligned to one task or one conf file at a time.
-2. Use highly descriptive knowledge source names and descriptions in Copilot Studio; the description materially improves retrieval under generative orchestration.
-3. Create separate documents for Splunk Enterprise and Splunk Cloud operational differences so the agent can ground to the correct platform-specific answer.
-4. Keep examples near the explanation. A chunk that contains only syntax without context often retrieves poorly.
-5. Add a glossary document for terms such as UF, HF, SHC, RF, SF, CIM, RBA, HEC, and notable event to improve matching on acronym-heavy user questions.
-6. Restrict access at the SharePoint library or site level for security-sensitive ES and hardening content so Copilot Studio respects Microsoft 365 access controls.
-7. Re-test retrieval after every major knowledge refresh by running a fixed prompt set for SPL, admin, Cloud, and ES scenarios; tune titles, descriptions, and chunk size when the wrong document is cited.
+1. **Convert reference files to `.docx` before uploading to SharePoint.** Markdown (`.md`) is not an officially supported Copilot Studio knowledge source file type. Use Pandoc (`pandoc input.md -o output.docx`) or a similar converter. Uploading raw `.md` may produce degraded chunking because markdown syntax characters pollute the extracted text. Supported types include `.docx`, `.pdf`, `.pptx`, and `.txt`.
+2. Break large documents into smaller SharePoint files aligned to one task or one conf file at a time.
+3. Use highly descriptive knowledge source names and descriptions in Copilot Studio; the description materially improves retrieval under generative orchestration.
+4. Create separate documents for Splunk Enterprise and Splunk Cloud operational differences so the agent can ground to the correct platform-specific answer.
+5. Keep examples near the explanation. A chunk that contains only syntax without context often retrieves poorly.
+6. Add a glossary document for terms such as UF, HF, SHC, RF, SF, CIM, RBA, HEC, and notable event to improve matching on acronym-heavy user questions. Promote this from optional to a **Phase 2 required deliverable** — it has an outsized impact on retrieval accuracy.
+7. Restrict access at the SharePoint library or site level for security-sensitive ES and hardening content so Copilot Studio respects Microsoft 365 access controls.
+8. Re-test retrieval after every major knowledge refresh by running a fixed prompt set for SPL, admin, Cloud, and ES scenarios; tune titles, descriptions, and chunk size when the wrong document is cited.
+9. Note the SharePoint document size limit of 50 MB. For large reference files, split into sub-documents before upload rather than relying on automatic chunking.

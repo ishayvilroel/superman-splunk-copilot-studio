@@ -1,6 +1,6 @@
 # 🦸 Superman Splunk — Microsoft Copilot Studio Version
 
-> **A production-ready Microsoft Copilot Studio agent design** that transforms the `superman-splunk` AI skill into an enterprise-grade Splunk expert agent for Microsoft 365 environments.
+> **A complete Microsoft Copilot Studio migration design and planning package** that transforms the `superman-splunk` AI skill into an enterprise Splunk expert agent for Microsoft 365 environments.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Microsoft%20Copilot%20Studio-blue)](https://copilotstudio.microsoft.com)
@@ -76,7 +76,7 @@ Production-grade agent instructions in Copilot Studio format. Covers:
 - What the agent must not do
 
 ### [`copilot-studio-paste-ready.txt`](copilot-studio-version/copilot-studio-paste-ready.txt)
-Plain-text version of the instructions, optimized for Copilot Studio's ~2000-token limit. Ready for direct paste.
+Plain-text version of the instructions, optimized for direct paste into Copilot Studio's Instructions field (~8,000-character limit). At ~4,200 characters it leaves substantial headroom for future additions.
 
 ### [`knowledge-mapping.md`](copilot-studio-version/knowledge-mapping.md)
 Maps each of the 5 reference files to a recommended Copilot Studio knowledge strategy. Includes:
@@ -117,9 +117,8 @@ Structured comparison of the current skill format vs Copilot Studio. Covers 10 s
 ## Source Material
 
 This Copilot Studio version is derived from:
-- **[superman-splunk](https://github.com/ishayvilroel/superman-splunk)** — the original Superpowers skill
-- Research from 300+ web sources via Google NotebookLM
-- Benchmark data: 96% pass rate with skill vs 73% without (+23pp) across 5 Splunk scenarios
+- **[superman-splunk](https://github.com/ishayvilroel/superman-splunk)** — the original Superpowers skill (research methodology: 300+ web sources via Google NotebookLM)
+- The superman-splunk source skill achieved a **96% pass rate vs 73% without-skill (+23pp)** across 5 Splunk benchmark scenarios. That benchmark covers the source skill only — this Copilot Studio migration package has not been independently evaluated. Use the acceptance criteria and suggested prompts in [`migration-plan.md`](copilot-studio-version/migration-plan.md) and [`suggested-prompts.md`](copilot-studio-version/suggested-prompts.md) as your evaluation framework when validating the deployed agent.
 
 ---
 
